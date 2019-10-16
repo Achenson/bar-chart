@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>FCC | Data Vis 01 - Bar Chart</title>
+    <style>
+      .bar:hover {
+        fill: black;
+      }
+
+      .svgcolor {
+        background-color: linen;
+        border-radius: 2px;
+        box-shadow: 1px 1px 1px 1px darkgreen;
+      }
+      .y-text {
+        font-size: 1.5rem;
+      }
+      body {
+        background-color: darkseagreen;
+      }
+
+      .parent {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .tick {
+        color: darkslategray;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="parent">
+      <h1 style="text-align: center" id="title">United States GDP</h1>
+      <div class="chart"></div>
+    </div>
+
+    <div id="mocha">
+    </div>
+
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+
+    <script>
+      const freeCodeCampURl =
+        "https://raw.githubusercontent.com/freeCodeCamp/ProjectReferenceData/master/GDP-data.json";
+
+      fetch(freeCodeCampURl)
+        .then(res => res.json())
+        .then(jsonData => {
+          const dataset = jsonData.data;
+
+          const margin = { top: 20, right: 20, bottom: 30, left: 45 },
+            //height & weight of bar chart itself,
+            // height & weight of svg will include this margins
+            w = 900 - margin.left - margin.right,
+            h = 600 - margin.top - margin.bottom;
+
+          const xScale = d3
+            .scaleBand()
+            //.domain([d3.min(dataset, d => d[0]), d3.max(dataset, (d) => d[0])])
+            //.domain([0, d3.max(dataset, (d, i) => d[0])])
+            .domain(dataset.map(d => d[0]))
+            .range([0, w]);
+
+          const yScale = d3
+            .scaleLinear()
+            .domain([0, d3.max(dataset, d => d[1])])
+            .range([h, 0]);
+
+          const svg = d3
+            .select(".chart")
+            .append("svg")
+            .attr("width", w + margin.left + margin.right)
+            .attr("height", h + margin.top + margin.bottom)
+            .attr("class", "svgcolor");
+          // append a 'group' element to 'svg'
+          // moves the 'group' element to the top left margin
+          const gElement = svg.append("g").attr(
+            "transform",
+            //"translate(" + margin.left + "," + margin.top + ")"
+            `translate(${margin.left},${margin.top})`
+          );
+
+
+          gElement
+            .selectAll("rect")
+            .data(dataset)
+            .enter()
+            .append("rect")
+            //.attr('x', (d,i) => i*8)
+            .attr("x", (d, i) => xScale(d[0]))
+            .attr("y", d => yScale(d[1]))
+            .attr("width", 2)
+            //.attr("height", (d, i) => d[1])
+            //!!! "h - " <- because the range in yScale is inverted?
+            //yScale(d[1]) represents empty part of the bar chart?
+            .attr("height", (d, i) => h - yScale(d[1]))
+            .attr("fill", "green")
+            .attr("class", "bar")
+
+            //adding tooltip after hovering over each bar
+            .append("title")
+            .attr("id", "tooltip")
+            .text((d, i) => {
+              // tranforming year display
+
+              let yearNumber = d[0].slice(0, 4);
+
+              let Q1toQ4 = "";
+
+              if (i % 4 === 0) {
+                Q1toQ4 = " Q1";
+              }
+
+              if ((i - 1) % 4 === 0) {
+                Q1toQ4 = " Q2";
+              }
+
+              if ((i - 2) % 4 === 0) {
+                Q1toQ4 = " Q3";
+              }
+
+              if ((i - 3) % 4 === 0) {
+                Q1toQ4 = " Q4";
+              }
+
+              //transforming money display
+
+              let moneyAmount = d[1].toString();
+
+              let moneyAmountFullString = `$${moneyAmount} Billion`;
+
+              return yearNumber + Q1toQ4 + "\n" + moneyAmountFullString;
+            });
+
+          const xAxis = d3.axisBottom(xScale);
+
+          const yAxis = d3.axisLeft(yScale);
+
+          //xAxis is added not to svg itself, but to group element to which the
+          //top & left margin is applied
+
+          //const added only to attach class to ticks
+          const xTicks = gElement
+            .append("g")
+            .attr("transform", "translate(0, " + h + ")")
+            .call(
+              xAxis
+                .tickValues(
+                  xScale.domain().filter(
+                    (d, i) =>
+                      //show those i which return true for the value below eg. ! 0 === true
+                      //1 in 20 will be shown
+                      //-12 -> because every year consists of 4 quarters (3X4)
+                      !((i - 12) % 20)
+                  )
+                )
+                .tickFormat(p => {
+                  return p.slice(0, 4);
+                })
+            )
+            .attr("id", "x-axis");
+
+          //adding css class to each tick
+          xTicks.selectAll("text").attr("class", "tick");
+
+          const yTicks = gElement
+            .append("g")
+            .call(yAxis)
+            .attr("id", "y-axis");
+
+          //adding css class to each tick
+          yTicks.selectAll("text").attr("class", "tick");
+
+          //adding vertical label
+          gElement
+            .append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 0)
+            .attr("x", 0 - h / 2)
+            .attr("dy", "1.5em")
+            //.style("text-anchor", "middle")
+            .text("Gross Domestic Product")
+            .attr("class", "y-text");
+        });
+    </script>
+  </body>
+</html>
